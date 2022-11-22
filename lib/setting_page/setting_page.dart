@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 
-import '../local_notice_service/local_notice_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -11,19 +10,16 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  late LocalNoticeService service;
   TextEditingController textEditingController = TextEditingController();
   int sec = 60;
   @override
   void initState() {
-    service = LocalNoticeService();
-    service.initialize();
-    listenToNotification();
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
           actions: [
@@ -55,11 +51,37 @@ class _SettingsPageState extends State<SettingsPage> {
                 controller: textEditingController,
               ),
               ElevatedButton(
-                onPressed: () async {
-                  sec = int.parse(textEditingController.text) * 60;
-                  await service.swowNotificationWithPayload(
-                      id: 0, second: sec, payload: 'payload');
-                },
+                onPressed: ()  async {
+                            bool isallowed = await AwesomeNotifications().isNotificationAllowed();
+                            if (!isallowed) {
+                              //no permission of local notification
+                             await AwesomeNotifications().requestPermissionToSendNotifications();
+                            }else{
+                                //show notification
+                                  await  AwesomeNotifications().createNotification(
+                                    content: NotificationContent( //simgple notification
+                                        id: 123,
+                                        channelKey: 'basic', //set configuration wuth key "basic"
+                                        title: 'Welcome to FlutterCampus.com',
+                                        body: 'This simple notification with action buttons in Flutter App',
+                                        payload: {'name':'FlutterCampus'},
+                                        autoDismissible: false,
+                                    ),
+
+                                    actionButtons: [
+                                        NotificationActionButton(
+                                          key: 'open', 
+                                          label: 'Open File',
+                                        ),
+
+                                        NotificationActionButton(
+                                          key: 'delete', 
+                                          label: 'Delete File',
+                                        )
+                                    ]
+                                );
+                           }
+                      }, 
                 child: Text('Start'),
               ),
             ],
@@ -69,13 +91,4 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void listenToNotification() =>
-      service.onNotificationClick.stream.listen(onNotificationListener);
-
-  Future<void> onNotificationListener(String? payload) async {
-    if (payload != null && payload.isNotEmpty) {
-      await service.swowNotificationWithPayload(
-          id: 0, second: sec, payload: 'payload');
-    }
-  }
 }
